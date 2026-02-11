@@ -1,9 +1,9 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Settings, Plus, Trash2, Edit2, User, Scissors, Calendar, Lock, LogOut, X, Check, Image as ImageIcon, Phone, MessageCircle, MapPin, Tag, Smartphone, Cloud, Sun, Moon, ChevronDown, ShieldCheck, Eye, EyeOff, RotateCcw } from 'lucide-react';
+import { Settings, Plus, Trash2, Edit2, User, Scissors, Calendar, Lock, LogOut, X, Check, Image as ImageIcon, Phone, MessageCircle, MapPin, Tag, Smartphone, Cloud, Sun, Moon, ChevronDown, ShieldCheck, Eye, EyeOff, RotateCcw, Camera } from 'lucide-react';
 import { useAppContext } from '../store/AppContext';
 import { Barber, BarberService, Offer } from '../types';
 import { APP_MODE } from '../constants';
+import React, { useState, useRef, useEffect } from 'react';
 
 const Modal: React.FC<{ isOpen: boolean; onClose: () => void; title: string; children: React.ReactNode }> = ({ isOpen, onClose, title, children }) => {
   const { theme } = useAppContext();
@@ -80,11 +80,12 @@ const ImagePicker: React.FC<{
 
 export const AdminScreen: React.FC = () => {
   const { 
-    branding, services, barbers, appointments, offers, isAdminAuthenticated, theme, toggleTheme, loginAdmin, logoutAdmin,
-    updateBranding, updateService, deleteService, updateBarber, deleteBarber, updateAppointment, updateOffer, deleteOffer
+    branding, services, barbers, appointments, offers, gallery, isAdminAuthenticated, theme, toggleTheme, loginAdmin, logoutAdmin,
+    updateBranding, updateService, deleteService, updateBarber, deleteBarber, updateAppointment, updateOffer, deleteOffer,
+    addGalleryImage, deleteGalleryImage
   } = useAppContext();
   
-  const [tab, setTab] = useState<'bookings' | 'branding' | 'services' | 'staff' | 'offers'>('bookings');
+  const [tab, setTab] = useState<'bookings' | 'branding' | 'services' | 'staff' | 'offers' | 'gallery'>('bookings');
   const [passwordInput, setPasswordInput] = useState('');
   const [editBranding, setEditBranding] = useState({ ...branding });
   const [showPassword, setShowPassword] = useState(false);
@@ -95,6 +96,8 @@ export const AdminScreen: React.FC = () => {
   const [staffForm, setStaffForm] = useState<Partial<Barber>>({});
   const [showOfferForm, setShowOfferForm] = useState(false);
   const [offerForm, setOfferForm] = useState<Partial<Offer>>({});
+  const [showGalleryForm, setShowGalleryForm] = useState(false);
+  const [galleryUrl, setGalleryUrl] = useState('');
 
   useEffect(() => { 
     setEditBranding({ ...branding }); 
@@ -125,6 +128,13 @@ export const AdminScreen: React.FC = () => {
     if (!offerForm.title || !offerForm.discount) return alert("Fill fields");
     await updateOffer({ ...offerForm, id: offerForm.id || Math.random().toString(36).substr(2, 9) } as Offer);
     setShowOfferForm(false);
+  };
+
+  const handleAddGallery = async () => {
+    if (!galleryUrl) return alert("Select an image first");
+    await addGalleryImage(galleryUrl);
+    setGalleryUrl('');
+    setShowGalleryForm(false);
   };
 
   if (!isAdminAuthenticated) {
@@ -192,6 +202,7 @@ export const AdminScreen: React.FC = () => {
           { id: 'services', label: 'Menu', icon: <Scissors size={14} /> },
           { id: 'staff', label: 'Team', icon: <User size={14} /> },
           { id: 'offers', label: 'Deals', icon: <Tag size={14} /> },
+          { id: 'gallery', label: 'Looks', icon: <Camera size={14} /> },
           { id: 'branding', label: 'Setup', icon: <Smartphone size={14} /> },
         ].map(t => (
           <button
@@ -316,6 +327,28 @@ export const AdminScreen: React.FC = () => {
         </div>
       )}
 
+      {tab === 'gallery' && (
+        <div className="space-y-4">
+          <button onClick={() => { setGalleryUrl(''); setShowGalleryForm(true); }} className={`w-full py-5 border-dashed text-[10px] font-black uppercase text-amber-600 flex items-center justify-center gap-3 rounded-2xl border transition-all ${theme === 'dark' ? 'bg-amber-500/5 border-amber-500/20' : 'bg-amber-50 border-amber-500/30'}`}>
+            <Plus size={18} /> Add New Look
+          </button>
+          
+          <div className="grid grid-cols-2 gap-3">
+            {gallery.map(img => (
+              <div key={img.id} className={`relative rounded-2xl overflow-hidden border shadow-sm group ${theme === 'dark' ? 'bg-zinc-900 border-white/5' : 'bg-white border-slate-100'}`}>
+                <img src={img.url} className="w-full h-32 object-cover" alt="Gallery" />
+                <button 
+                  onClick={() => deleteGalleryImage(img.id)}
+                  className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {tab === 'services' && (
         <div className="space-y-4">
           <button onClick={() => { setServiceForm({ category: 'Haircut', duration: 30 }); setShowServiceForm(true); }} className={`w-full py-5 border-dashed text-[10px] font-black uppercase text-amber-600 flex items-center justify-center gap-3 rounded-2xl border transition-all ${theme === 'dark' ? 'bg-amber-500/5 border-amber-500/20' : 'bg-amber-50 border-amber-500/30'}`}>
@@ -385,6 +418,19 @@ export const AdminScreen: React.FC = () => {
         </div>
       )}
 
+      <Modal isOpen={showGalleryForm} onClose={() => setShowGalleryForm(false)} title="Upload Portfolio Image">
+        <div className="space-y-5">
+          <ImagePicker 
+            label="Style Photo" 
+            currentUrl={galleryUrl} 
+            onUpload={(url) => setGalleryUrl(url)} 
+            cloudName={editBranding.cloudinaryCloudName} 
+            uploadPreset={editBranding.cloudinaryUploadPreset} 
+          />
+          <button onClick={handleAddGallery} className={`w-full py-5 font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-xl transition-all ${theme === 'dark' ? 'bg-amber-500 text-black' : 'bg-slate-900 text-white'}`}>Save to Gallery</button>
+        </div>
+      </Modal>
+
       <Modal isOpen={showServiceForm} onClose={() => setShowServiceForm(false)} title="Register Service">
         <div className="space-y-5">
           <ImagePicker label="Preview Pic" currentUrl={serviceForm.imageUrl || ''} onUpload={(url) => setServiceForm(prev => ({...prev, imageUrl: url}))} cloudName={editBranding.cloudinaryCloudName} uploadPreset={editBranding.cloudinaryUploadPreset} />
@@ -444,7 +490,6 @@ export const AdminScreen: React.FC = () => {
           </div>
           <div className="space-y-1">
             <p className={labelClass}>Specialty</p>
-            {/* Fixed typo 'staffDir' to 'staffForm' */}
             <input placeholder="E.g. Master Stylist" className={inputClass} value={staffForm.specialty || ''} onChange={(e) => setStaffForm({...staffForm, specialty: e.target.value})} />
           </div>
           <button onClick={saveStaff} className={`w-full py-5 font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-xl transition-all ${theme === 'dark' ? 'bg-amber-500 text-black' : 'bg-slate-900 text-white'}`}>Update Roster</button>
