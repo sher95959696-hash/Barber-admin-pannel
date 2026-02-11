@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
   appId: 'com.barberpro.admin', 
   
   // Yahan jo naam likhenge, wahi mobile ki home screen pe icon ke neechy nazar ayega
-  appName: 'Barber Pro Admin', 
+  appName: 'Admin Pannel', 
   
   webDir: 'dist',
   server: {
